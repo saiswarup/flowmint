@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "FlowMint",
+    "slug": "flowmint",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050D12"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourname.flowmint"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#00C896"
+      },
+      "package": "com.yourname.flowmint",
+      "versionCode": 1,
+      "permissions": ["NOTIFICATIONS"]
+    },
+    "plugins": ["expo-notifications"],
+    "platforms": ["ios", "android"],
+    "extra": {
+      "eas": {
+        "projectId": "8f7c6950-61e5-45ee-9d1d-edb2e6e7bcf8"
+      }
+    }
+  }
+}
