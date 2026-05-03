@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FlowMint",
-    "slug": "spendsmart",
+    "slug": "flowmint",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,10 +11,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#050D12"
     },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.yourname.flowmint"
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -23,10 +19,6 @@
       "package": "com.yourname.flowmint",
       "versionCode": 2
     },
-    "platforms": [
-      "ios",
-      "android"
-    ],
     "owner": "jforests"
   }
 }
