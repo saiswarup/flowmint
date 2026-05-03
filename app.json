@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FlowMint",
-    "slug": "flowmint",
+    "slug": "spendsmart",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,14 +22,22 @@
       },
       "package": "com.yourname.flowmint",
       "versionCode": 1,
-      "permissions": ["NOTIFICATIONS"]
+      "permissions": [
+        "NOTIFICATIONS"
+      ]
     },
-    "plugins": ["expo-notifications"],
-    "platforms": ["ios", "android"],
+    "plugins": [
+      "expo-notifications"
+    ],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "extra": {
       "eas": {
         "projectId": "8f7c6950-61e5-45ee-9d1d-edb2e6e7bcf8"
       }
-    }
+    },
+    "owner": "jforests"
   }
 }
