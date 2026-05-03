@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, TextInput, Alert, Switch } from 'react-native';
 import { useExpenses } from '../context/ExpenseContext';
 import { COLORS, SPACING, FONT, RADIUS, rs, ms, sh, clamp } from '../utils/responsive';
+import Constants from 'expo-constants';
+
 
 const CURRENCIES = [
   { code: 'INR', symbol: '₹', label: 'Indian Rupee' },
@@ -121,7 +123,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.sm },
+  header: {  flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl,paddingTop: Constants.statusBarHeight + rs(10),paddingBottom: SPACING.sm },
   headerTitle: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.text },
   mintBadge: { backgroundColor: COLORS.primary + '18', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: rs(20), borderWidth: 1, borderColor: COLORS.primary + '30' },
   mintBadgeText: { fontSize: FONT.sm, color: COLORS.primary, fontWeight: '600' },

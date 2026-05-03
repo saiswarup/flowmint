@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Ima
 import { useExpenses } from '../context/ExpenseContext';
 import { COLORS } from '../utils/categories';
 import { SPACING, FONT, RADIUS, SCREEN, rs, ms, sw, sh, clamp, ICON } from '../utils/responsive';
+import Constants from 'expo-constants';
+
 
 const GOAL_IMAGES: Record<string, string> = {
   'goa':       'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
@@ -89,7 +91,7 @@ export default function WalletScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.md },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl,paddingTop: Constants.statusBarHeight + rs(10),paddingBottom: SPACING.sm },
   headerTitle: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.text },
   addBtn: { backgroundColor: COLORS.card, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: rs(20), borderWidth: 1, borderColor: COLORS.border },
   addBtnText: { fontSize: FONT.sm, color: COLORS.primary, fontWeight: '600' },

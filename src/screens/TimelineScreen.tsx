@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, SectionList, SafeAreaView, TouchableOpacity, Al
 import { useExpenses } from '../context/ExpenseContext';
 import { COLORS, formatDate, formatTime, getCategoryMeta } from '../utils/categories';
 import { SPACING, FONT, RADIUS, rs, sw, sh, ICON } from '../utils/responsive';
+import Constants from 'expo-constants';
+
 
 type Filter = 'All' | 'Expense' | 'Income';
 
@@ -95,7 +97,7 @@ export default function TimelineScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.md },
+  header: {  flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl,paddingTop: Constants.statusBarHeight + rs(10),paddingBottom: SPACING.sm },
   headerTitle: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.text },
   iconBtn: { width: rs(38), height: rs(38), borderRadius: rs(19), backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
   filterRow: { flexDirection: 'row', paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: SPACING.lg },

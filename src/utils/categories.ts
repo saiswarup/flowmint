@@ -7,6 +7,24 @@ export interface CategoryMeta {
   bg: string;
 }
 
+export const COLORS = {
+  bg: '#050D12',
+  card: '#0D1B22',
+  card2: '#13252E',
+  border: '#1E3742',
+
+  text: '#FFFFFF',
+  textSub: '#7A9BAA',
+
+  primary: '#00C896',
+  secondary: '#00A3FF',
+  accent: '#00EDAA',
+  yellow: '#FFD93D',
+  pink: '#FF6B8A',
+  orange: '#FF9F43',
+  purple: '#9B5CFF',
+};
+
 export const CATEGORIES: CategoryMeta[] = [
   { label: 'Food & Dining',     emoji: '🍔', color: '#FF9F43', bg: '#1A1200' },
   { label: 'Transport',         emoji: '🚗', color: '#00A3FF', bg: '#001A2A' },

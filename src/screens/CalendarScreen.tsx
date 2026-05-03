@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } fr
 import { useExpenses } from '../context/ExpenseContext';
 import { COLORS, getCategoryMeta, formatTime } from '../utils/categories';
 import { SPACING, FONT, RADIUS, SCREEN, rs, ms, sw, sh, clamp, ICON } from '../utils/responsive';
+import Constants from 'expo-constants';
+
 
 const DAYS = ['S','M','T','W','T','F','S'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -141,7 +143,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.sm },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl,paddingTop: Constants.statusBarHeight + rs(10),paddingBottom: SPACING.sm},
   headerTitle: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.text },
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.xl, marginBottom: SPACING.md },
   navBtn: { width: rs(36), height: rs(36), borderRadius: rs(18), backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },

@@ -19,6 +19,11 @@
       "package": "com.yourname.flowmint",
       "versionCode": 2
     },
-    "owner": "jforests"
+    "owner": "jforests",
+    "extra": {
+      "eas": {
+        "projectId": "6d2886c8-84a7-448d-b93f-182ecea9261a"
+      }
+    }
   }
 }

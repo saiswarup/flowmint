@@ -4,6 +4,8 @@ import { useExpenses, Expense } from '../context/ExpenseContext';
 import { COLORS, formatTime, getCategoryMeta } from '../utils/categories';
 import { SPACING, FONT, RADIUS, SCREEN, rs, ms, sw, sh, clamp, ICON } from '../utils/responsive';
 import AddExpenseModal from '../components/AddExpenseModal';
+import Constants from 'expo-constants';
+
 
 export default function HomeScreen() {
   const { state, getMonthExpenses, getMonthIncome, deleteExpense, formatAmount } = useExpenses();
@@ -45,16 +47,15 @@ export default function HomeScreen() {
             <Text style={styles.changeLabel}>vs last month</Text>
           </View>
 
-          {/* Flowing line chart */}
+          {/* Flow bar chart */}
           <View style={styles.sparkline}>
             {[20, 45, 35, 60, 50, 72, 58, 80, 68, 90].map((h, i) => (
-              <View key={i} style={[styles.sparkDot, {
-                bottom: (h / 100) * rs(36),
-                left: i * ((SCREEN.width - SPACING.lg * 2 - SPACING.xl * 2) / 9),
-                backgroundColor: h > 70 ? COLORS.accent : COLORS.primary,
-                width: h > 70 ? rs(8) : rs(6),
-                height: h > 70 ? rs(8) : rs(6),
-              }]} />
+              <View key={i} style={styles.sparkBarWrap}>
+                <View style={[styles.sparkBar, {
+                  height: `${h}%`,
+                  backgroundColor: h > 70 ? COLORS.accent : COLORS.primary,
+                }]} />
+              </View>
             ))}
           </View>
 
@@ -181,7 +182,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scrollContent: { flexGrow: 1 },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.sm },
+  topBar: {  flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl,paddingTop: Constants.statusBarHeight + rs(10),paddingBottom: SPACING.sm  },
   greeting: { fontSize: clamp(ms(20), 16, 26), fontWeight: '800', color: COLORS.text },
   greetingSub: { fontSize: FONT.sm, color: COLORS.textSub, marginTop: rs(2) },
   avatar: { width: ICON.md, height: ICON.md, borderRadius: ICON.md / 2, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -194,8 +195,9 @@ const styles = StyleSheet.create({
   changeBadge: { paddingHorizontal: rs(8), paddingVertical: rs(2), borderRadius: rs(20), backgroundColor: COLORS.primary + '20' },
   changeBadgeText: { color: COLORS.primary, fontSize: FONT.xs, fontWeight: '700' },
   changeLabel: { fontSize: FONT.xs, color: COLORS.textSub },
-  sparkline: { height: rs(44), position: 'relative', marginBottom: SPACING.md },
-  sparkDot: { position: 'absolute', borderRadius: rs(4) },
+  sparkline: { height: rs(44), flexDirection: "row", alignItems: "flex-end", gap: rs(3), marginBottom: SPACING.md },
+  sparkBarWrap: { flex: 1, height: "100%", justifyContent: "flex-end" },
+  sparkBar: { width: "100%", borderRadius: rs(3), minHeight: rs(2) },
   statsRow: { flexDirection: 'row', backgroundColor: COLORS.card2, borderRadius: RADIUS.lg, padding: SPACING.sm, marginBottom: SPACING.sm },
   statItem: { flex: 1, alignItems: 'center', gap: rs(3), paddingHorizontal: rs(2) },
   statIcon: { width: rs(28), height: rs(28), borderRadius: rs(14), alignItems: 'center', justifyContent: 'center' },
