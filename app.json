@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FlowMint",
-    "slug": "spendsmart",
+    "slug": "flowmint",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,18 +21,9 @@
         "backgroundColor": "#00C896"
       },
       "package": "com.yourname.flowmint",
-      "versionCode": 1,
-      "permissions": [
-        "NOTIFICATIONS"
-      ]
+      "versionCode": 2
     },
-    "plugins": [
-      "expo-notifications"
-    ],
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "extra": {
       "eas": {
         "projectId": "8f7c6950-61e5-45ee-9d1d-edb2e6e7bcf8"
