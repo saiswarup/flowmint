@@ -13,13 +13,50 @@ export default function HomeScreen() {
   const [addType, setAddType] = useState<'expense' | 'income'>('expense');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
-  const totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
+  const totalIncome = state.expenses
+  .filter(item => item.type === 'income')
+  .reduce((sum, item) => sum + item.amount, 0);
+
+  const totalExpense = state.expenses
+  .filter(item => item.type === 'expense')
+  .reduce((sum, item) => sum + item.amount, 0);
+
+  // Current balance
+  const totalBalance = totalIncome - totalExpense;
+
+  // Total savings balance
+  const totalSavings = state.expenses
+    .filter(item =>
+      item.category === 'Savings' ||
+      item.category === 'Investment'
+    )
+  .reduce((sum, item) => sum + item.amount, 0);
   const monthExp = getMonthExpenses();
   const monthInc = getMonthIncome();
   const recentExp = state.expenses.slice(0, 8);
   const userName = state.profile.name || 'Friend';
   const budgetPct = Math.min((monthExp / state.profile.monthlyBudget) * 100, 100);
-  const savings = Math.max(0, (monthInc || 78500) - (monthExp || 0));
+  const savings = totalSavings;
+  const last7Days = [...Array(7)].map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+  
+    const dayKey = d.toISOString().split('T')[0];
+  
+    const total = state.expenses
+      .filter(item =>
+        item.type === 'expense' &&
+        item.date.startsWith(dayKey)
+      )
+      .reduce((sum, item) => sum + item.amount, 0);
+  
+    return {
+      day: d.toLocaleDateString('en-IN', { weekday: 'short' }),
+      amount: total,
+    };
+  });
+  
+  const maxExpense = Math.max(...last7Days.map(d => d.amount), 1);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -40,31 +77,68 @@ export default function HomeScreen() {
         <View style={styles.balCard}>
           {/* Mint glow */}
           <View style={styles.glowCircle} />
-          <Text style={styles.balLabel}>Total Balance</Text>
-          <Text style={styles.balAmount} adjustsFontSizeToFit numberOfLines={1}>{formatAmount(totalBalance)}</Text>
-          <View style={styles.changeRow}>
-            <View style={styles.changeBadge}><Text style={styles.changeBadgeText}>↑ +12.5%</Text></View>
-            <Text style={styles.changeLabel}>vs last month</Text>
+          
+          <View style={styles.balanceTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.balLabel}>Total Balance</Text>
+            <Text
+              style={styles.balAmount}
+              adjustsFontSizeToFit
+              numberOfLines={1}
+            >
+              {formatAmount(totalBalance)}
+            </Text>
           </View>
 
-          {/* Flow bar chart */}
-          <View style={styles.sparkline}>
-            {[20, 45, 35, 60, 50, 72, 58, 80, 68, 90].map((h, i) => (
-              <View key={i} style={styles.sparkBarWrap}>
-                <View style={[styles.sparkBar, {
-                  height: `${h}%`,
-                  backgroundColor: h > 70 ? COLORS.accent : COLORS.primary,
-                }]} />
-              </View>
-            ))}
+          <View style={styles.savingBox}>
+            <Text style={styles.savingLabel}>Savings</Text>
+            <Text style={styles.savingAmount}>
+              {formatAmount(totalSavings)}
+            </Text>
           </View>
+        </View>
+
+          {/* Flow bar chart */}
+          {/* Dynamic Expense Chart */}
+<View style={styles.chartContainer}>
+  {last7Days.map((item, i) => {
+    const height = (item.amount / maxExpense) * 100;
+
+    return (
+      <View key={i} style={styles.chartItem}>
+        <Text style={styles.chartAmount}>
+          {item.amount > 0 ? `₹${item.amount}` : ''}
+        </Text>
+
+        <View style={styles.chartBarBg}>
+          <View
+            style={[
+              styles.chartBar,
+              {
+                height: `${Math.max(height, 6)}%`,
+                backgroundColor:
+                  item.amount > maxExpense * 0.7
+                    ? COLORS.pink
+                    : COLORS.primary,
+              },
+            ]}
+          />
+        </View>
+
+        <Text style={styles.chartDay}>
+          {item.day}
+        </Text>
+      </View>
+    );
+  })}
+</View>
 
           {/* Stats */}
           <View style={styles.statsRow}>
             {[
               { icon: '↑', label: 'Income', amount: formatAmount(monthInc || 78500), color: COLORS.primary, bg: COLORS.primary + '18' },
               { icon: '↓', label: 'Expense', amount: formatAmount(monthExp || 29750), color: COLORS.pink, bg: COLORS.pink + '18' },
-              { icon: '🌿', label: 'Savings', amount: formatAmount(savings || 48750), color: COLORS.accent, bg: COLORS.accent + '18' },
+              { icon: '🌿', label: 'Savings', amount: formatAmount(totalSavings), color: COLORS.accent, bg: COLORS.accent + '18' },
             ].map((item, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <View style={styles.divider} />}
@@ -191,13 +265,79 @@ const styles = StyleSheet.create({
   glowCircle: { position: 'absolute', width: sw(60), height: sw(60), borderRadius: sw(30), backgroundColor: COLORS.primary + '10', top: -sw(20), right: -sw(10) },
   balLabel: { fontSize: FONT.sm, color: COLORS.textSub, marginBottom: rs(4) },
   balAmount: { fontSize: clamp(ms(28), 22, 36), fontWeight: '800', color: COLORS.text },
+  balanceTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+  },
+  
+  savingBox: {
+    backgroundColor: COLORS.card2,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'flex-end',
+    minWidth: rs(110),
+  },
+  
+  savingLabel: {
+    fontSize: FONT.xs,
+    color: COLORS.textSub,
+    marginBottom: rs(2),
+  },
+  
+  savingAmount: {
+    fontSize: FONT.md,
+    fontWeight: '800',
+    color: COLORS.accent,
+  },
+  
+  chartItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  
+  chartBar: {
+    width: '100%',
+    borderRadius: rs(12),
+    minHeight: rs(8),
+  },
+  
+  chartDay: {
+    marginTop: rs(6),
+    fontSize: FONT.xs,
+    color: COLORS.textSub,
+  },
+  
+  chartAmount: {
+    fontSize: rs(9),
+    color: COLORS.textSub,
+    marginBottom: rs(4),
+  },
+  chartContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: rs(120),
+    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  
+  chartBarBg: {
+    width: rs(18),
+    height: rs(75),
+    backgroundColor: COLORS.card2,
+    borderRadius: rs(12),
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
   changeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: rs(4), marginBottom: SPACING.md },
   changeBadge: { paddingHorizontal: rs(8), paddingVertical: rs(2), borderRadius: rs(20), backgroundColor: COLORS.primary + '20' },
   changeBadgeText: { color: COLORS.primary, fontSize: FONT.xs, fontWeight: '700' },
   changeLabel: { fontSize: FONT.xs, color: COLORS.textSub },
-  sparkline: { height: rs(44), flexDirection: "row", alignItems: "flex-end", gap: rs(3), marginBottom: SPACING.md },
-  sparkBarWrap: { flex: 1, height: "100%", justifyContent: "flex-end" },
-  sparkBar: { width: "100%", borderRadius: rs(3), minHeight: rs(2) },
   statsRow: { flexDirection: 'row', backgroundColor: COLORS.card2, borderRadius: RADIUS.lg, padding: SPACING.sm, marginBottom: SPACING.sm },
   statItem: { flex: 1, alignItems: 'center', gap: rs(3), paddingHorizontal: rs(2) },
   statIcon: { width: rs(28), height: rs(28), borderRadius: rs(14), alignItems: 'center', justifyContent: 'center' },

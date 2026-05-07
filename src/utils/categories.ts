@@ -33,11 +33,37 @@ export const CATEGORIES: CategoryMeta[] = [
   { label: 'Entertainment',     emoji: '🎬', color: '#00C896', bg: '#001A14' },
   { label: 'Health',            emoji: '💊', color: '#FF6B8A', bg: '#1A0010' },
   { label: 'Education',         emoji: '📚', color: '#00EDAA', bg: '#001A12' },
+
+  { label: 'Rent',              emoji: '🏠', color: '#9B5CFF', bg: '#140A22' },
+  { label: 'Groceries',         emoji: '🛒', color: '#00C896', bg: '#001A14' },
+  { label: 'Fuel',              emoji: '⛽', color: '#FF9F43', bg: '#1A1200' },
+  { label: 'Mobile Recharge',   emoji: '📱', color: '#00A3FF', bg: '#001A2A' },
+  { label: 'Internet',          emoji: '🌐', color: '#00EDAA', bg: '#001A12' },
+  { label: 'Electricity',       emoji: '💡', color: '#FFD93D', bg: '#1A1600' },
+  { label: 'Water Bill',        emoji: '🚰', color: '#00A3FF', bg: '#001A2A' },
+  { label: 'Gas',               emoji: '🔥', color: '#FF6B8A', bg: '#1A0010' },
+
+  { label: 'Salary',            emoji: '💼', color: '#00C896', bg: '#001A14' },
+  { label: 'Freelance',         emoji: '💻', color: '#9B5CFF', bg: '#140A22' },
+  { label: 'Business',          emoji: '🏢', color: '#00EDAA', bg: '#001A12' },
+
+  { label: 'Savings',           emoji: '🏦', color: '#00C896', bg: '#001A14' },
+  { label: 'Investment',        emoji: '📈', color: '#FFD93D', bg: '#1A1600' },
+  { label: 'Insurance',         emoji: '🛡️', color: '#00A3FF', bg: '#001A2A' },
+
+  { label: 'Travel',            emoji: '✈️', color: '#FF9F43', bg: '#1A1200' },
+  { label: 'Subscription',      emoji: '📺', color: '#FF6B8A', bg: '#1A0010' },
+  { label: 'Gym',               emoji: '🏋️', color: '#00EDAA', bg: '#001A12' },
+  { label: 'Pet Care',          emoji: '🐶', color: '#FF9F43', bg: '#1A1200' },
+  { label: 'Kids',              emoji: '🧸', color: '#9B5CFF', bg: '#140A22' },
+  { label: 'Gifts',             emoji: '🎁', color: '#FF6B8A', bg: '#1A0010' },
+  { label: 'Charity',           emoji: '❤️', color: '#FF6B8A', bg: '#1A0010' },
+
   { label: 'Other',             emoji: '📦', color: '#7A9BAA', bg: '#0D1F26' },
 ];
 
 export const getCategoryMeta = (cat: string): CategoryMeta =>
-  CATEGORIES.find(c => c.label === cat) || CATEGORIES[7];
+  CATEGORIES.find(c => c.label === cat) || CATEGORIES[CATEGORIES.length - 1];
 
 export const formatCurrency = (amount: number, symbol = '₹'): string =>
   `${symbol}${amount.toLocaleString('en-IN')}`;

@@ -2,9 +2,35 @@ import React, { createContext, useContext, useReducer, useEffect, useRef, useSta
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Category =
-  | 'Food & Dining' | 'Transport' | 'Shopping'
-  | 'Bills & Utilities' | 'Entertainment' | 'Health'
-  | 'Education' | 'Other';
+  | 'Food & Dining'
+  | 'Transport'
+  | 'Shopping'
+  | 'Bills & Utilities'
+  | 'Entertainment'
+  | 'Health'
+  | 'Education'
+  | 'Rent'
+  | 'Groceries'
+  | 'Fuel'
+  | 'Mobile Recharge'
+  | 'Internet'
+  | 'Electricity'
+  | 'Water Bill'
+  | 'Gas'
+  | 'Salary'
+  | 'Freelance'
+  | 'Business'
+  | 'Savings'
+  | 'Investment'
+  | 'Insurance'
+  | 'Travel'
+  | 'Subscription'
+  | 'Gym'
+  | 'Pet Care'
+  | 'Kids'
+  | 'Gifts'
+  | 'Charity'
+  | 'Other';
 
 export type WalletType = 'Cash' | 'Bank Account' | 'Investment' | 'Savings';
 
