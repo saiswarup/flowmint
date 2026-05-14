@@ -5,6 +5,7 @@ import { COLORS, formatTime, getCategoryMeta } from '../utils/categories';
 import { SPACING, FONT, RADIUS, SCREEN, rs, ms, sw, sh, clamp, ICON } from '../utils/responsive';
 import AddExpenseModal from '../components/AddExpenseModal';
 import Constants from 'expo-constants';
+import { useNavigation } from '@react-navigation/native';
 
 
 export default function HomeScreen() {
@@ -12,13 +13,22 @@ export default function HomeScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [addType, setAddType] = useState<'expense' | 'income'>('expense');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const navigation = useNavigation<any>();
 
   const totalIncome = state.expenses
-  .filter(item => item.type === 'income')
+  .filter(
+    item =>
+      item.type === 'income' &&
+      item.category !== 'Stock'
+  )
   .reduce((sum, item) => sum + item.amount, 0);
 
   const totalExpense = state.expenses
-  .filter(item => item.type === 'expense')
+  .filter(
+    item =>
+      item.type === 'expense' &&
+      item.category !== 'Stock'
+  )
   .reduce((sum, item) => sum + item.amount, 0);
 
   // Current balance
@@ -31,8 +41,33 @@ export default function HomeScreen() {
       item.category === 'Investment'
     )
   .reduce((sum, item) => sum + item.amount, 0);
-  const monthExp = getMonthExpenses();
-  const monthInc = getMonthIncome();
+
+  const monthExp = state.expenses
+  .filter(item => {
+    const currentMonth =
+      new Date(item.date).getMonth() ===
+      new Date().getMonth();
+
+    return (
+      currentMonth &&
+      item.type === 'expense' &&
+      item.category !== 'Stock'
+    );
+  })
+  .reduce((sum, item) => sum + item.amount, 0);
+const monthInc = state.expenses
+  .filter(item => {
+    const currentMonth =
+      new Date(item.date).getMonth() ===
+      new Date().getMonth();
+
+    return (
+      currentMonth &&
+      item.type === 'income' &&
+      item.category !== 'Stock'
+    );
+  })
+  .reduce((sum, item) => sum + item.amount, 0);
   const recentExp = state.expenses.slice(0, 8);
   const userName = state.profile.name || 'Friend';
   const budgetPct = Math.min((monthExp / state.profile.monthlyBudget) * 100, 100);
@@ -57,6 +92,77 @@ export default function HomeScreen() {
   });
   
   const maxExpense = Math.max(...last7Days.map(d => d.amount), 1);
+
+ // ==========================
+// STOCK MARKET TRACKER
+// ==========================
+
+const stockTrades = state.expenses.filter(
+  item => item.category === 'Stock'
+);
+
+// Total Profit
+const totalProfit = stockTrades
+  .filter(item => item.tradeType === 'profit')
+  .reduce((sum, item) => sum + item.amount, 0);
+
+// Total Loss
+const totalLoss = stockTrades
+  .filter(item => item.tradeType === 'loss')
+  .reduce((sum, item) => sum + item.amount, 0);
+
+// Net P&L
+const totalPnL = totalProfit - totalLoss;
+
+// Today Trades
+const today = new Date().toDateString();
+
+const todayTrades = stockTrades.filter(
+  item => new Date(item.date).toDateString() === today
+);
+
+// Today's P&L
+const todayProfit = todayTrades
+  .filter(item => item.tradeType === 'profit')
+  .reduce((sum, item) => sum + item.amount, 0);
+
+const todayLoss = todayTrades
+  .filter(item => item.tradeType === 'loss')
+  .reduce((sum, item) => sum + item.amount, 0);
+
+const todayPnL = todayProfit - todayLoss;
+
+// Win Rate
+const winningTrades = stockTrades.filter(
+  item => item.tradeType === 'profit'
+).length;
+
+const losingTrades = stockTrades.filter(
+  item => item.tradeType === 'loss'
+).length;
+
+const totalTrades = stockTrades.length;
+
+const winRate =
+  totalTrades > 0
+    ? ((winningTrades / totalTrades) * 100).toFixed(1)
+    : '0';
+
+// Average RR
+const rrTrades = stockTrades.filter(
+  item => item.riskReward
+);
+
+const avgRR =
+  rrTrades.length > 0
+    ? (
+        rrTrades.reduce(
+          (sum, item) =>
+            sum + Number(item.riskReward || 0),
+          0
+        ) / rrTrades.length
+      ).toFixed(2)
+    : '0';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -100,38 +206,38 @@ export default function HomeScreen() {
 
           {/* Flow bar chart */}
           {/* Dynamic Expense Chart */}
-<View style={styles.chartContainer}>
-  {last7Days.map((item, i) => {
-    const height = (item.amount / maxExpense) * 100;
+          <View style={styles.chartContainer}>
+            {last7Days.map((item, i) => {
+              const height = (item.amount / maxExpense) * 100;
 
-    return (
-      <View key={i} style={styles.chartItem}>
-        <Text style={styles.chartAmount}>
-          {item.amount > 0 ? `₹${item.amount}` : ''}
-        </Text>
+              return (
+                <View key={i} style={styles.chartItem}>
+                  <Text style={styles.chartAmount}>
+                    {item.amount > 0 ? `₹${item.amount}` : ''}
+                  </Text>
 
-        <View style={styles.chartBarBg}>
-          <View
-            style={[
-              styles.chartBar,
-              {
-                height: `${Math.max(height, 6)}%`,
-                backgroundColor:
-                  item.amount > maxExpense * 0.7
-                    ? COLORS.pink
-                    : COLORS.primary,
-              },
-            ]}
-          />
-        </View>
+                  <View style={styles.chartBarBg}>
+                    <View
+                      style={[
+                        styles.chartBar,
+                        {
+                          height: `${Math.max(height, 6)}%`,
+                          backgroundColor:
+                            item.amount > maxExpense * 0.7
+                              ? COLORS.pink
+                              : COLORS.primary,
+                        },
+                      ]}
+                    />
+                  </View>
 
-        <Text style={styles.chartDay}>
-          {item.day}
-        </Text>
-      </View>
-    );
-  })}
-</View>
+                  <Text style={styles.chartDay}>
+                    {item.day}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
 
           {/* Stats */}
           <View style={styles.statsRow}>
@@ -177,6 +283,163 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
+        {/* Stock Market Tracker */}
+{/* Stock Market Tracker */}
+<View style={styles.section}>
+
+  <View style={styles.marketHeader}>
+    <View style={styles.marketTitleRow}>
+      <Text style={styles.sectionTitle}>
+        Market Tracker
+      </Text>
+
+      <View style={styles.newBadge}>
+        <Text style={styles.newBadgeText}>
+          LIVE
+        </Text>
+      </View>
+    </View>
+
+    <TouchableOpacity
+      style={styles.tradeButton}
+      onPress={() => navigation.navigate('AddTrade')}
+    >
+      <Text style={styles.tradeButtonText}>
+        + Add Trade
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+  <View style={styles.marketCard}>
+
+    {/* LEFT SIDE */}
+    <View style={{ flex: 1 }}>
+
+      <Text style={styles.marketLabel}>
+        Today's P&L
+      </Text>
+
+      <Text
+        style={[
+          styles.marketAmount,
+          {
+            color:
+              todayPnL >= 0
+                ? COLORS.primary
+                : COLORS.pink,
+          },
+        ]}
+      >
+        {todayPnL >= 0 ? '+' : '-'}
+        {formatAmount(Math.abs(todayPnL))}
+      </Text>
+
+      <View style={styles.marketChangeRow}>
+        <Text
+          style={[
+            styles.marketChange,
+            {
+              color:
+                totalPnL >= 0
+                  ? COLORS.primary
+                  : COLORS.pink,
+            },
+          ]}
+        >
+          {totalPnL >= 0 ? '▲' : '▼'}
+          {' '}
+          {formatAmount(Math.abs(totalPnL))}
+        </Text>
+
+        <Text style={styles.marketSub}>
+          Overall P&L
+        </Text>
+      </View>
+
+      {/* RR */}
+      <View style={styles.rrBox}>
+        <Text style={styles.rrLabel}>
+          Avg RR
+        </Text>
+
+        <Text
+          style={[
+            styles.rrValue,
+            {
+              color:
+                Number(avgRR) >= 2
+                  ? COLORS.primary
+                  : COLORS.orange,
+            },
+          ]}
+        >
+          1 : {avgRR}
+        </Text>
+      </View>
+
+    </View>
+
+    {/* Divider */}
+    <View style={styles.marketDivider} />
+
+    {/* RIGHT SIDE */}
+    <View style={styles.marketSide}>
+
+      <Text style={styles.marketMiniLabel}>
+        Total Profit
+      </Text>
+
+      <Text
+        style={[
+          styles.marketMiniAmount,
+          { color: COLORS.primary },
+        ]}
+      >
+        +{formatAmount(totalProfit)}
+      </Text>
+
+      <Text style={styles.marketMiniLabel}>
+        Total Loss
+      </Text>
+
+      <Text
+        style={[
+          styles.marketMiniAmount,
+          { color: COLORS.pink },
+        ]}
+      >
+        -{formatAmount(totalLoss)}
+      </Text>
+
+      {/* WIN RATE */}
+      <View style={styles.winRateBox}>
+        <Text style={styles.winRateLabel}>
+          Win Rate
+        </Text>
+
+        <Text
+          style={[
+            styles.winRateValue,
+            {
+              color:
+                Number(winRate) >= 60
+                  ? COLORS.primary
+                  : COLORS.orange,
+            },
+          ]}
+        >
+          {winRate}%
+        </Text>
+
+        <Text style={styles.winRateSub}>
+          {winningTrades}W • {losingTrades}L
+        </Text>
+      </View>
+
+    </View>
+
+  </View>
+</View>
 
         {/* Quick Access */}
         <View style={styles.section}>
@@ -371,4 +634,143 @@ const styles = StyleSheet.create({
   emptyCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: SPACING.xxl, alignItems: 'center', gap: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
   emptyTitle: { fontSize: FONT.lg, fontWeight: '600', color: COLORS.text },
   emptySub: { fontSize: FONT.sm, color: COLORS.textSub },
+  marketHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  
+  marketTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  
+  newBadge: {
+    backgroundColor: COLORS.primary + '20',
+    paddingHorizontal: rs(10),
+    paddingVertical: rs(3),
+    borderRadius: rs(20),
+  },
+  
+  newBadgeText: {
+    color: COLORS.primary,
+    fontSize: FONT.xs,
+    fontWeight: '700',
+  },
+  
+  tradeButton: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: rs(8),
+    borderRadius: RADIUS.lg,
+  },
+  
+  tradeButtonText: {
+    color: COLORS.primary,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+  },
+  
+  marketCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  marketLabel: {
+    fontSize: FONT.sm,
+    color: COLORS.textSub,
+  },
+  
+  marketAmount: {
+    fontSize: clamp(ms(24), 20, 32),
+    fontWeight: '800',
+    marginTop: rs(8),
+  },
+  
+  marketChangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: rs(6),
+  },
+  
+  marketChange: {
+    fontSize: FONT.sm,
+    fontWeight: '700',
+  },
+  
+  marketSub: {
+    fontSize: FONT.xs,
+    color: COLORS.textSub,
+    marginLeft: rs(6),
+  },
+  
+  marketDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: COLORS.border,
+    marginHorizontal: SPACING.lg,
+  },
+  
+  marketSide: {
+    justifyContent: 'center',
+    gap: rs(6),
+  },
+  
+  marketMiniLabel: {
+    fontSize: FONT.xs,
+    color: COLORS.textSub,
+  },
+  
+  marketMiniAmount: {
+    fontSize: FONT.md,
+    fontWeight: '700',
+  },
+  winRateBox: {
+    marginTop: rs(12),
+    paddingTop: rs(10),
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  
+  winRateLabel: {
+    fontSize: FONT.xs,
+    color: COLORS.textSub,
+  },
+  
+  winRateValue: {
+    fontSize: FONT.lg,
+    fontWeight: '800',
+    marginTop: rs(2),
+  },
+  
+  winRateSub: {
+    fontSize: FONT.xs,
+    color: COLORS.textSub,
+    marginTop: rs(2),
+  },
+  rrBox: {
+    marginTop: rs(18),
+    backgroundColor: COLORS.card2,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+  },
+  
+  rrLabel: {
+    color: COLORS.textSub,
+    fontSize: FONT.xs,
+  },
+  
+  rrValue: {
+    fontSize: FONT.xl,
+    fontWeight: '800',
+    marginTop: rs(4),
+  },
 });

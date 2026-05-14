@@ -16,6 +16,7 @@ import SetupScreen from './src/screens/SetupScreen';
 import AddExpenseModal from './src/components/AddExpenseModal';
 import { ExpenseProvider, useExpenses } from './src/context/ExpenseContext';
 import { COLORS, FONT, rs, ms, sw, sh } from './src/utils/responsive';
+import AddTradeScreen from './src/screens/AddTradeScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -102,6 +103,13 @@ function MainApp() {
         <Tab.Screen name="Analytics" component={AnalyticsScreen} />
         <Tab.Screen name="Wallet" component={WalletScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen
+          name="AddTrade"
+          component={AddTradeScreen}
+          options={{
+            tabBarButton: () => null,
+          }}
+        />
       </Tab.Navigator>
     </NavigationContainer>
   );

@@ -14,7 +14,12 @@ const CURRENCIES = [
 ];
 
 export default function SettingsScreen() {
-  const { state, updateProfile, formatAmount } = useExpenses();
+  const {
+    state,
+    updateProfile,
+    formatAmount,
+    clearAllExpenses,
+  } = useExpenses();
   const { profile, expenses } = state;
   const [budgetInput, setBudgetInput] = useState(profile.monthlyBudget.toString());
   const [notifications, setNotifications] = useState(profile.notificationsEnabled);
@@ -94,9 +99,42 @@ export default function SettingsScreen() {
             <Text style={styles.rowArrow}>›</Text>
           </TouchableOpacity>
           <View style={styles.sep} />
-          <TouchableOpacity style={styles.row} onPress={() => Alert.alert('Clear All Data', 'This will delete all records.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Clear', style: 'destructive', onPress: () => {} }])}>
-            <Text style={[styles.rowLabel, { color: COLORS.pink }]}>🗑  Clear all data</Text>
-          </TouchableOpacity>
+          <TouchableOpacity
+  style={styles.row}
+  onPress={() =>
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete all expenses, income, savings, and trading history.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            clearAllExpenses();
+
+            Alert.alert(
+              '✅ Success',
+              'All app data cleared successfully.'
+            );
+          },
+        },
+      ]
+    )
+  }
+>
+  <Text
+    style={[
+      styles.rowLabel,
+      { color: COLORS.pink },
+    ]}
+  >
+    🗑 Clear all data
+  </Text>
+</TouchableOpacity>
         </View>
 
         <Text style={styles.groupLabel}>APP</Text>
