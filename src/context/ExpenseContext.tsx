@@ -99,6 +99,9 @@ export interface UserProfile {
   monthlyBudget: number;
   setupDone: boolean;
   notificationsEnabled: boolean;
+  autoImportEnabled: boolean;
+  smsImportEnabled: boolean;
+  notificationImportEnabled: boolean;
   reminderTime: string;
   theme: 'dark' | 'light';
 }
@@ -128,6 +131,9 @@ const defaultProfile: UserProfile = {
   monthlyBudget: 25000,
   setupDone: false,
   notificationsEnabled: true,
+  autoImportEnabled: false,
+  smsImportEnabled: true,
+  notificationImportEnabled: true,
   reminderTime: '21:00',
   theme: 'dark',
 };
@@ -313,6 +319,7 @@ interface ContextType {
   ) => Promise<void>;
 
   clearAllExpenses: () => Promise<void>;
+  reloadExpenses: () => Promise<void>;
 
   getMonthExpenses: () => number;
   getMonthIncome: () => number;
@@ -474,6 +481,18 @@ export const ExpenseProvider: React.FC<{
         []
       );
     };
+
+  const reloadExpenses = async () => {
+    const expenses = await loadKey(KEYS.expenses);
+
+    dispatch({
+      type: 'LOAD_DATA',
+      payload: {
+        ...stateRef.current,
+        expenses: Array.isArray(expenses) ? expenses : [],
+      },
+    });
+  };
 
   const editExpense = (
     e: Expense
@@ -657,6 +676,7 @@ export const ExpenseProvider: React.FC<{
 
         updateProfile,
         clearAllExpenses,
+        reloadExpenses,
 
         getMonthExpenses,
         getMonthIncome,

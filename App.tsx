@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { Text, View, TouchableOpacity, Animated, StyleSheet, AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -11,12 +11,14 @@ import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import WalletScreen from './src/screens/WalletScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import SMSScreen from './src/screens/SMSScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import SetupScreen from './src/screens/SetupScreen';
 import AddExpenseModal from './src/components/AddExpenseModal';
 import { ExpenseProvider, useExpenses } from './src/context/ExpenseContext';
 import { COLORS, FONT, rs, ms, sw, sh } from './src/utils/responsive';
 import AddTradeScreen from './src/screens/AddTradeScreen';
+import { scanAndImportSms } from './src/services/smsImportService';
 
 const Tab = createBottomTabNavigator();
 
@@ -110,6 +112,13 @@ function MainApp() {
             tabBarButton: () => null,
           }}
         />
+        <Tab.Screen
+          name="SMSImport"
+          component={SMSScreen}
+          options={{
+            tabBarButton: () => null,
+          }}
+        />
       </Tab.Navigator>
     </NavigationContainer>
   );
@@ -118,16 +127,43 @@ function MainApp() {
 const ONBOARDING_KEY = 'flowmint_onboarding_v1';
 
 function AppInner() {
-  const { state, isLoading } = useExpenses();
+  const { state, isLoading, reloadExpenses } = useExpenses();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [appState, setAppState] = useState<'loading' | 'onboarding' | 'setup' | 'main'>('loading');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const runAutoImport = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+    if (!state.profile.autoImportEnabled || !state.profile.smsImportEnabled) return;
+
+    await scanAndImportSms(50);
+    await reloadExpenses();
+  }, [
+    reloadExpenses,
+    state.profile.autoImportEnabled,
+    state.profile.smsImportEnabled,
+  ]);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
       .then(val => setOnboardingDone(val === 'true'))
       .catch(() => setOnboardingDone(false));
   }, []);
+
+  useEffect(() => {
+    if (appState !== 'main') return;
+
+    runAutoImport();
+
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        runAutoImport();
+        reloadExpenses();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [appState, runAutoImport, reloadExpenses]);
 
   useEffect(() => {
     if (isLoading || onboardingDone === null) return;

@@ -11,143 +11,21 @@ import {
   Platform,
 } from 'react-native';
 import SmsAndroid from 'react-native-get-sms-android';
-import { useExpenses, Category } from '../context/ExpenseContext';
+import { useExpenses } from '../context/ExpenseContext';
 import {
-  COLORS,
-  SPACING,
-  FONT,
-  RADIUS,
-  rs,
-  ms,
-} from '../utils/responsive';
+  guessCategory,
+  parseTransactionMessage,
+  ParsedTransaction,
+} from '../utils/parseTransaction';
+import { COLORS, FONT, RADIUS } from '../utils/responsive';
 
-interface ParsedSMS {
+interface ParsedSMS extends ParsedTransaction {
   id: string;
-  raw: string;
-  amount: number;
-  balance?: number;
-  type: 'expense' | 'income';
-  merchant: string;
-  bank: string;
-  date: string;
   added: boolean;
 }
 
-function parseSMS(message: string, date: string): ParsedSMS | null {
-  const amountMatch = message.match(
-    /(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]{1,2})?)/i
-  );
-
-  if (!amountMatch) return null;
-
-  const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
-
-  if (isNaN(amount) || amount <= 0) return null;
-
-  const balanceMatch = message.match(
-    /(?:avail(?:able)?\s*bal(?:ance)?|a\/c\s*bal(?:ance)?|balance)[:\s]*?(?:rs\.?|inr|₹)?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i
-  );
-
-  const balance = balanceMatch
-    ? parseFloat(balanceMatch[1].replace(/,/g, ''))
-    : undefined;
-
-  const lower = message.toLowerCase();
-
-  const isCredit = [
-    'credited',
-    'credit',
-    'received',
-    'deposited',
-    'refund',
-    'cashback',
-  ].some(k => lower.includes(k));
-
-  const isDebit = [
-    'debited',
-    'debit',
-    'spent',
-    'paid',
-    'withdrawn',
-    'purchase',
-    'payment',
-  ].some(k => lower.includes(k));
-
-  if (!isCredit && !isDebit) return null;
-
-  const type = isCredit ? 'income' : 'expense';
-
-  let merchant =
-    type === 'expense' ? 'Purchase' : 'Credit Received';
-
-  const merchantMatch = message.match(
-    /(?:at|to|from)\s+([A-Z][A-Za-z0-9\s&]{2,20}?)(?:\s+on|\s+for|\.|,|$)/i
-  );
-
-  if (merchantMatch)
-    merchant = merchantMatch[1].trim();
-
-  let bank = 'Bank';
-
-  const banks = [
-    'SBI',
-    'HDFC',
-    'ICICI',
-    'Axis',
-    'Kotak',
-    'PNB',
-    'BOB',
-    'Canara',
-    'Yes Bank',
-    'IndusInd',
-    'Paytm',
-    'PhonePe',
-  ];
-
-  for (const b of banks) {
-    if (lower.includes(b.toLowerCase())) {
-      bank = b;
-      break;
-    }
-  }
-
-  return {
-    id: Date.now().toString() + Math.random(),
-    raw: message,
-    amount,
-    balance,
-    type,
-    merchant,
-    bank,
-    date,
-    added: false,
-  };
-}
-
-function guessCategory(merchant: string): Category {
-  const m = merchant.toLowerCase();
-
-  if (/swiggy|zomato|food|pizza|burger/.test(m))
-    return 'Food & Dining';
-
-  if (/ola|uber|rapido|metro|fuel/.test(m))
-    return 'Transport';
-
-  if (/amazon|flipkart|myntra/.test(m))
-    return 'Shopping';
-
-  if (/bill|airtel|jio/.test(m))
-    return 'Bills & Utilities';
-
-  if (/hospital|medical/.test(m))
-    return 'Health';
-
-  return 'Other';
-}
-
 export default function SMSScreen() {
-  const { addExpense } = useExpenses();
-
+  const { addExpense, reloadExpenses } = useExpenses();
   const [messages, setMessages] = useState<ParsedSMS[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
 
@@ -157,16 +35,27 @@ export default function SMSScreen() {
         box: 'inbox',
         maxCount: 100,
       }),
-      (fail: any) => {
+      (fail: unknown) => {
         console.log('Failed:', fail);
       },
-      (count: number, smsList: string) => {
+      (_count: number, smsList: string) => {
         const arr = JSON.parse(smsList);
 
         const parsed = arr
-          .map((sms: any) =>
-            parseSMS(sms.body, new Date(Number(sms.date)).toISOString())
-          )
+          .map((sms: { _id: string; body: string; date: string }) => {
+            const result = parseTransactionMessage(
+              sms.body,
+              new Date(Number(sms.date)).toISOString()
+            );
+
+            if (!result) return null;
+
+            return {
+              ...result,
+              id: sms._id,
+              added: false,
+            };
+          })
           .filter(Boolean);
 
         setMessages(parsed);
@@ -176,29 +65,17 @@ export default function SMSScreen() {
 
   const requestPermission = async () => {
     if (Platform.OS !== 'android') {
-      Alert.alert(
-        'Android Only',
-        'SMS reading works only on Android'
-      );
+      Alert.alert('Android Only', 'SMS reading works only on Android');
       return;
     }
 
-    const granted =
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.READ_SMS
-      );
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.READ_SMS
+    );
 
-    if (
-      granted ===
-      PermissionsAndroid.RESULTS.GRANTED
-    ) {
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
       setHasPermission(true);
-
-      Alert.alert(
-        'Success',
-        'SMS permission granted'
-      );
-
+      Alert.alert('Success', 'SMS permission granted');
       readSMS();
     }
   };
@@ -209,23 +86,18 @@ export default function SMSScreen() {
       amount: msg.amount,
       category: guessCategory(msg.merchant),
       date: msg.date,
-      note: `Balance: ₹${msg.balance || 'N/A'}`,
+      note: `Balance: ₹${msg.balance ?? 'N/A'}`,
       type: msg.type,
       wallet: 'Bank Account',
     });
 
     setMessages(prev =>
-      prev.map(m =>
-        m.id === msg.id
-          ? { ...m, added: true }
-          : m
-      )
+      prev.map(m => (m.id === msg.id ? { ...m, added: true } : m))
     );
   };
 
-  const handleAddAll = () => {
-    const pending =
-      messages.filter(m => !m.added);
+  const handleAddAll = async () => {
+    const pending = messages.filter(m => !m.added);
 
     pending.forEach(msg => {
       addExpense({
@@ -233,11 +105,13 @@ export default function SMSScreen() {
         amount: msg.amount,
         category: guessCategory(msg.merchant),
         date: msg.date,
-        note: `Balance: ₹${msg.balance || 'N/A'}`,
+        note: `Balance: ₹${msg.balance ?? 'N/A'}`,
         type: msg.type,
         wallet: 'Bank Account',
       });
     });
+
+    await reloadExpenses();
 
     setMessages(prev =>
       prev.map(m => ({
@@ -247,72 +121,56 @@ export default function SMSScreen() {
     );
   };
 
-  const pending =
-    messages.filter(m => !m.added);
+  const pending = messages.filter(m => !m.added);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Text style={styles.header}>
-        SMS Import
+      <Text style={styles.header}>SMS Import</Text>
+      <Text style={styles.subHeader}>
+        Review bank SMS and add them as expenses manually.
       </Text>
 
       {!hasPermission && (
-        <TouchableOpacity
-          style={styles.permissionBtn}
-          onPress={requestPermission}
-        >
-          <Text style={styles.btnText}>
-            Allow SMS Access
-          </Text>
+        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+          <Text style={styles.btnText}>Allow SMS Access</Text>
+        </TouchableOpacity>
+      )}
+
+      {hasPermission && (
+        <TouchableOpacity style={styles.refreshBtn} onPress={readSMS}>
+          <Text style={styles.btnText}>Refresh SMS</Text>
         </TouchableOpacity>
       )}
 
       {pending.length > 0 && (
-        <TouchableOpacity
-          style={styles.addAllBtn}
-          onPress={handleAddAll}
-        >
-          <Text style={styles.btnText}>
-            Add All ({pending.length})
-          </Text>
+        <TouchableOpacity style={styles.addAllBtn} onPress={handleAddAll}>
+          <Text style={styles.btnText}>Add All ({pending.length})</Text>
         </TouchableOpacity>
       )}
 
       <ScrollView>
         {messages.map(msg => (
-          <View
-            key={msg.id}
-            style={styles.card}
-          >
-            <Text style={styles.title}>
-              {msg.merchant}
+          <View key={msg.id} style={styles.card}>
+            <Text style={styles.title}>{msg.merchant}</Text>
+            <Text style={styles.amount}>₹{msg.amount}</Text>
+            <Text style={styles.meta}>
+              {msg.type === 'expense' ? 'Debit' : 'Credit'} · {msg.bank}
             </Text>
+            <Text style={styles.meta}>Balance: ₹{msg.balance ?? 'N/A'}</Text>
 
-            <Text>
-              ₹{msg.amount}
-            </Text>
-
-            <Text>
-              Balance: ₹
-              {msg.balance || 'N/A'}
-            </Text>
-
-            <Text>{msg.bank}</Text>
-
-            {!msg.added && (
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() =>
-                  handleAdd(msg)
-                }
-              >
-                <Text style={styles.btnText}>
-                  Add
-                </Text>
+            {!msg.added ? (
+              <TouchableOpacity style={styles.addBtn} onPress={() => handleAdd(msg)}>
+                <Text style={styles.btnText}>Add</Text>
               </TouchableOpacity>
+            ) : (
+              <Text style={styles.addedLabel}>Added</Text>
             )}
           </View>
         ))}
+
+        {hasPermission && messages.length === 0 && (
+          <Text style={styles.empty}>No bank SMS found in recent messages.</Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -324,51 +182,80 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bg,
     padding: 20,
   },
-
   header: {
     fontSize: FONT.xxl,
     fontWeight: '800',
     color: COLORS.text,
+    marginBottom: 8,
+  },
+  subHeader: {
+    fontSize: FONT.sm,
+    color: COLORS.textSub,
     marginBottom: 20,
   },
-
   permissionBtn: {
     backgroundColor: COLORS.primary,
     padding: 15,
     borderRadius: RADIUS.lg,
-    marginBottom: 20,
+    marginBottom: 12,
   },
-
+  refreshBtn: {
+    backgroundColor: COLORS.card,
+    padding: 15,
+    borderRadius: RADIUS.lg,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   addAllBtn: {
     backgroundColor: COLORS.primary,
     padding: 15,
     borderRadius: RADIUS.lg,
     marginBottom: 20,
   },
-
   addBtn: {
     marginTop: 10,
     backgroundColor: COLORS.primary,
     padding: 10,
     borderRadius: RADIUS.md,
   },
-
   btnText: {
     color: '#000',
     fontWeight: '700',
     textAlign: 'center',
   },
-
   card: {
     backgroundColor: COLORS.card,
     padding: 15,
     borderRadius: RADIUS.lg,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-
   title: {
     fontSize: FONT.lg,
     fontWeight: '700',
     color: COLORS.text,
+  },
+  amount: {
+    fontSize: FONT.xl,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginTop: 4,
+  },
+  meta: {
+    fontSize: FONT.sm,
+    color: COLORS.textSub,
+    marginTop: 2,
+  },
+  addedLabel: {
+    marginTop: 10,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  empty: {
+    color: COLORS.textSub,
+    textAlign: 'center',
+    marginTop: 40,
   },
 });
