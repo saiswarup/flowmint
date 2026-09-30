@@ -27,6 +27,12 @@ export interface ExpenseRecord {
   wallet: string;
 }
 
+interface ImportItem {
+  parsed: ParsedTransaction;
+  sourceId: string;
+  source: 'sms' | 'notification';
+}
+
 async function loadExpenses(): Promise<ExpenseRecord[]> {
   const raw = await AsyncStorage.getItem(STORAGE_KEYS.expenses);
   if (!raw) return [];
@@ -56,13 +62,10 @@ async function loadProcessedIds(): Promise<string[]> {
   }
 }
 
-async function markProcessed(sourceId: string): Promise<void> {
-  const ids = await loadProcessedIds();
-  if (ids.includes(sourceId)) return;
-  const updated = [sourceId, ...ids].slice(0, 500);
+async function saveProcessedIds(ids: string[]): Promise<void> {
   await AsyncStorage.setItem(
     STORAGE_KEYS.processedIds,
-    JSON.stringify(updated)
+    JSON.stringify(ids.slice(0, 500))
   );
 }
 
@@ -97,20 +100,11 @@ export async function isAutoImportEnabled(
   return profile.notificationImportEnabled !== false;
 }
 
-export async function importTransactionIfNew(
-  parsed: ParsedTransaction,
-  sourceId: string,
-  source: 'sms' | 'notification'
-): Promise<boolean> {
-  const enabled = await isAutoImportEnabled(source);
-  if (!enabled) return false;
-
-  const processedIds = await loadProcessedIds();
-  if (processedIds.includes(sourceId)) return false;
-
-  const expenses = await loadExpenses();
-
-  const duplicate = expenses.some(
+function isDuplicateExpense(
+  expenses: ExpenseRecord[],
+  parsed: ParsedTransaction
+): boolean {
+  return expenses.some(
     e =>
       e.amount === parsed.amount &&
       e.name === parsed.merchant &&
@@ -118,13 +112,13 @@ export async function importTransactionIfNew(
       new Date(e.date).toDateString() ===
         new Date(parsed.date).toDateString()
   );
+}
 
-  if (duplicate) {
-    await markProcessed(sourceId);
-    return false;
-  }
-
-  const expense: ExpenseRecord = {
+function createExpenseRecord(
+  parsed: ParsedTransaction,
+  source: 'sms' | 'notification'
+): ExpenseRecord {
+  return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: parsed.merchant,
     amount: parsed.amount,
@@ -137,10 +131,56 @@ export async function importTransactionIfNew(
     type: parsed.type,
     wallet: 'Bank Account',
   };
+}
 
-  await saveExpenses([expense, ...expenses]);
-  await markProcessed(sourceId);
-  return true;
+export async function batchImportTransactions(
+  items: ImportItem[]
+): Promise<number> {
+  if (items.length === 0) return 0;
+
+  const profile = await loadAutoImportProfile();
+  if (!profile.autoImportEnabled) return 0;
+
+  const processedSet = new Set(await loadProcessedIds());
+  let expenses = await loadExpenses();
+  let imported = 0;
+
+  for (const { parsed, sourceId, source } of items) {
+    if (source === 'sms' && profile.smsImportEnabled === false) continue;
+    if (source === 'notification' && profile.notificationImportEnabled === false) {
+      continue;
+    }
+
+    if (processedSet.has(sourceId)) continue;
+
+    if (isDuplicateExpense(expenses, parsed)) {
+      processedSet.add(sourceId);
+      continue;
+    }
+
+    expenses = [createExpenseRecord(parsed, source), ...expenses];
+    processedSet.add(sourceId);
+    imported += 1;
+  }
+
+  if (imported > 0) {
+    await saveExpenses(expenses);
+  }
+
+  await saveProcessedIds([...processedSet]);
+
+  return imported;
+}
+
+export async function importTransactionIfNew(
+  parsed: ParsedTransaction,
+  sourceId: string,
+  source: 'sms' | 'notification'
+): Promise<boolean> {
+  const imported = await batchImportTransactions([
+    { parsed, sourceId, source },
+  ]);
+  return imported > 0;
 }
 
 export async function reloadExpensesFromStorage(): Promise<ExpenseRecord[]> {

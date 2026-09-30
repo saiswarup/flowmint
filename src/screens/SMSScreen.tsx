@@ -10,6 +10,7 @@ import {
   PermissionsAndroid,
   Platform,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import SmsAndroid from 'react-native-get-sms-android';
 import { useExpenses } from '../context/ExpenseContext';
 import {
@@ -25,6 +26,7 @@ interface ParsedSMS extends ParsedTransaction {
 }
 
 export default function SMSScreen() {
+  const navigation = useNavigation<any>();
   const { addExpense, reloadExpenses } = useExpenses();
   const [messages, setMessages] = useState<ParsedSMS[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
@@ -125,6 +127,14 @@ export default function SMSScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <View style={styles.topRow}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.header}>SMS Import</Text>
       <Text style={styles.subHeader}>
         Review bank SMS and add them as expenses manually.
@@ -181,6 +191,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
     padding: 20,
+  },
+  topRow: {
+    marginBottom: 8,
+  },
+  backBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  backText: {
+    color: COLORS.primary,
+    fontSize: FONT.md,
+    fontWeight: '700',
   },
   header: {
     fontSize: FONT.xxl,

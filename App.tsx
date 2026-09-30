@@ -131,18 +131,34 @@ function AppInner() {
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [appState, setAppState] = useState<'loading' | 'onboarding' | 'setup' | 'main'>('loading');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const profileRef = useRef(state.profile);
+  const lastAutoImportRef = useRef(0);
+  const autoImportRunningRef = useRef(false);
+
+  profileRef.current = state.profile;
 
   const runAutoImport = useCallback(async () => {
     if (Platform.OS !== 'android') return;
-    if (!state.profile.autoImportEnabled || !state.profile.smsImportEnabled) return;
+    if (autoImportRunningRef.current) return;
 
-    await scanAndImportSms(50);
-    await reloadExpenses();
-  }, [
-    reloadExpenses,
-    state.profile.autoImportEnabled,
-    state.profile.smsImportEnabled,
-  ]);
+    const { autoImportEnabled, smsImportEnabled } = profileRef.current;
+    if (!autoImportEnabled || !smsImportEnabled) return;
+
+    const now = Date.now();
+    if (now - lastAutoImportRef.current < 30000) return;
+
+    autoImportRunningRef.current = true;
+    lastAutoImportRef.current = now;
+
+    try {
+      await scanAndImportSms(30);
+      await reloadExpenses();
+    } catch (e) {
+      console.warn('Auto import failed:', e);
+    } finally {
+      autoImportRunningRef.current = false;
+    }
+  }, [reloadExpenses]);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
@@ -153,17 +169,21 @@ function AppInner() {
   useEffect(() => {
     if (appState !== 'main') return;
 
-    runAutoImport();
+    const timer = setTimeout(() => {
+      runAutoImport();
+    }, 800);
 
     const subscription = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') {
         runAutoImport();
-        reloadExpenses();
       }
     });
 
-    return () => subscription.remove();
-  }, [appState, runAutoImport, reloadExpenses]);
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [appState, runAutoImport]);
 
   useEffect(() => {
     if (isLoading || onboardingDone === null) return;

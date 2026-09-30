@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Switch,
   Platform,
   PermissionsAndroid,
+  InteractionManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import RNAndroidNotificationListener from 'react-native-android-notification-listener';
@@ -46,6 +48,19 @@ export default function SettingsScreen() {
   );
   const [notificationStatus, setNotificationStatus] = useState('unknown');
   const [scanning, setScanning] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setAutoImport(profile.autoImportEnabled);
+    setSmsImport(profile.smsImportEnabled);
+    setNotificationImport(profile.notificationImportEnabled);
+    setNotifications(profile.notificationsEnabled);
+  }, [
+    profile.autoImportEnabled,
+    profile.smsImportEnabled,
+    profile.notificationImportEnabled,
+    profile.notificationsEnabled,
+  ]);
 
   const refreshNotificationStatus = useCallback(async () => {
     if (Platform.OS !== 'android') return;
@@ -64,50 +79,87 @@ export default function SettingsScreen() {
   );
 
   const requestSmsPermission = async () => {
+    if (busy) return;
+
     if (Platform.OS !== 'android') {
       Alert.alert('Android only', 'SMS import works on Android devices.');
       return;
     }
 
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.READ_SMS
-    );
+    setBusy(true);
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_SMS
+      );
 
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      Alert.alert('Success', 'SMS permission granted.');
-    } else {
-      Alert.alert('Permission denied', 'Enable SMS access in app settings.');
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('Success', 'SMS permission granted.');
+      } else {
+        Alert.alert('Permission denied', 'Enable SMS access in app settings.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not request SMS permission.');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const requestNotificationAccess = () => {
+  const requestNotificationAccess = async () => {
+    if (busy) return;
+
     if (Platform.OS !== 'android') {
       Alert.alert('Android only', 'Notification access works on Android devices.');
       return;
     }
 
-    RNAndroidNotificationListener.requestPermission();
-    setTimeout(refreshNotificationStatus, 1500);
+    setBusy(true);
+    try {
+      RNAndroidNotificationListener.requestPermission();
+    } catch {
+      Alert.alert('Error', 'Could not open notification settings.');
+    } finally {
+      setTimeout(() => {
+        refreshNotificationStatus();
+        setBusy(false);
+      }, 500);
+    }
   };
 
   const handleScanSmsNow = async () => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' || scanning || busy) return;
+
+    const hasPermission = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.READ_SMS
+    );
+
+    if (!hasPermission) {
+      Alert.alert(
+        'SMS permission needed',
+        'Tap "Allow SMS access" first, then try again.'
+      );
+      return;
+    }
 
     setScanning(true);
-    try {
-      const imported = await scanAndImportSms(100);
-      await reloadExpenses();
-      Alert.alert(
-        'SMS scan complete',
-        imported > 0
-          ? `${imported} new transaction${imported === 1 ? '' : 's'} added.`
-          : 'No new transactions found.'
-      );
-    } catch {
-      Alert.alert('Scan failed', 'Could not read SMS. Check permissions.');
-    } finally {
-      setScanning(false);
-    }
+    setBusy(true);
+
+    InteractionManager.runAfterInteractions(async () => {
+      try {
+        const imported = await scanAndImportSms(50);
+        await reloadExpenses();
+        Alert.alert(
+          'SMS scan complete',
+          imported > 0
+            ? `${imported} new transaction${imported === 1 ? '' : 's'} added.`
+            : 'No new transactions found.'
+        );
+      } catch {
+        Alert.alert('Scan failed', 'Could not read SMS. Check permissions.');
+      } finally {
+        setScanning(false);
+        setBusy(false);
+      }
+    });
   };
 
   const statusLabel =
@@ -128,7 +180,16 @@ export default function SettingsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: rs(100) }}
+        scrollEnabled={!scanning}
       >
+        {(scanning || busy) && (
+          <View style={styles.loadingBanner}>
+            <ActivityIndicator color={COLORS.primary} />
+            <Text style={styles.loadingText}>
+              {scanning ? 'Scanning SMS…' : 'Please wait…'}
+            </Text>
+          </View>
+        )}
         <Text style={styles.groupLabel}>PROFILE</Text>
         <View style={styles.card}>
           <View style={styles.profileRow}>
@@ -198,12 +259,20 @@ export default function SettingsScreen() {
             />
           </View>
           <View style={styles.sep} />
-          <TouchableOpacity style={styles.row} onPress={requestSmsPermission}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={requestSmsPermission}
+            disabled={busy || scanning}
+          >
             <Text style={styles.rowLabel}>Allow SMS access</Text>
             <Text style={styles.rowArrow}>›</Text>
           </TouchableOpacity>
           <View style={styles.sep} />
-          <TouchableOpacity style={styles.row} onPress={requestNotificationAccess}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={requestNotificationAccess}
+            disabled={busy || scanning}
+          >
             <View>
               <Text style={styles.rowLabel}>Allow notification access</Text>
               <Text style={styles.rowSub}>Status: {statusLabel}</Text>
@@ -214,7 +283,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.row}
             onPress={handleScanSmsNow}
-            disabled={scanning}
+            disabled={scanning || busy}
           >
             <Text style={styles.rowLabel}>
               {scanning ? 'Scanning SMS…' : 'Scan SMS now'}
@@ -224,7 +293,11 @@ export default function SettingsScreen() {
           <View style={styles.sep} />
           <TouchableOpacity
             style={styles.row}
-            onPress={() => navigation.navigate('SMSImport')}
+            onPress={() => {
+              if (busy || scanning) return;
+              navigation.navigate('SMSImport');
+            }}
+            disabled={busy || scanning}
           >
             <Text style={styles.rowLabel}>Review SMS imports</Text>
             <Text style={styles.rowArrow}>›</Text>
@@ -475,4 +548,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   currencyLabel: { flex: 1, fontSize: FONT.md, color: COLORS.text },
+  loadingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  loadingText: {
+    color: COLORS.textSub,
+    fontSize: FONT.sm,
+  },
 });
