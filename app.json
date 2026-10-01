@@ -16,7 +16,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#00C896"
       },
-      "package": "com.yourname.flowmint",
+      "package": "com.jforests.flowmint",
       "versionCode": 2,
       "permissions": [
         "READ_SMS",
