@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "FlowMint",
@@ -17,10 +18,9 @@
         "backgroundColor": "#00C896"
       },
       "package": "com.jforests.flowmint",
-      "versionCode": 2,
+      "versionCode": 3,
+      "minSdkVersion": 24,
       "permissions": [
-        "READ_SMS",
-        "RECEIVE_SMS",
         "READ_SMS",
         "RECEIVE_SMS"
       ],

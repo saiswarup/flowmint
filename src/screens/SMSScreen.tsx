@@ -11,8 +11,10 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import SmsAndroid from 'react-native-get-sms-android';
 import { useExpenses } from '../context/ExpenseContext';
+
+const SmsAndroid =
+  Platform.OS === 'android' ? require('react-native-get-sms-android') : null;
 import {
   guessCategory,
   parseTransactionMessage,

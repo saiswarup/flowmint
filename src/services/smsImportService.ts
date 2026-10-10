@@ -3,9 +3,11 @@ import {
   PermissionsAndroid,
   Platform,
 } from 'react-native';
-import SmsAndroid from 'react-native-get-sms-android';
 import { parseTransactionMessage } from '../utils/parseTransaction';
 import { batchImportTransactions } from './autoExpenseService';
+
+const SmsAndroid =
+  Platform.OS === 'android' ? require('react-native-get-sms-android') : null;
 
 interface SmsRecord {
   _id: string;

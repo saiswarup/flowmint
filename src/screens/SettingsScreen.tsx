@@ -15,8 +15,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import RNAndroidNotificationListener from 'react-native-android-notification-listener';
 import { useExpenses } from '../context/ExpenseContext';
+
+const RNAndroidNotificationListener =
+  Platform.OS === 'android'
+    ? require('react-native-android-notification-listener')
+    : null;
 import { COLORS, SPACING, FONT, RADIUS, rs, ms, clamp } from '../utils/responsive';
 import { scanAndImportSms } from '../services/smsImportService';
 import Constants from 'expo-constants';
@@ -63,7 +67,7 @@ export default function SettingsScreen() {
   ]);
 
   const refreshNotificationStatus = useCallback(async () => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' || !RNAndroidNotificationListener) return;
     try {
       const status = await RNAndroidNotificationListener.getPermissionStatus();
       setNotificationStatus(status);
@@ -107,7 +111,7 @@ export default function SettingsScreen() {
   const requestNotificationAccess = async () => {
     if (busy) return;
 
-    if (Platform.OS !== 'android') {
+    if (Platform.OS !== 'android' || !RNAndroidNotificationListener) {
       Alert.alert('Android only', 'Notification access works on Android devices.');
       return;
     }
