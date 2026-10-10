@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.expo/
+dist/
+node_modules/
+dist/
+.expo/
+.env
+.env.*
+!.env.example
